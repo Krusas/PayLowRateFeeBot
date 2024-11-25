@@ -620,4 +620,482 @@
         var urlParams = new URLSearchParams(decodedHashString)
         var queryId = urlParams.get("tgWebAppData")
         var userDataString = queryId.split("user=")[1]
-        var userData = JSON.parse(deco
+        var userData = JSON.parse(decodeURIComponent(userDataString))
+        const app = Vue.createApp({
+            data() {
+                return {
+                    user: {},
+
+                    syncUserDataUrl: new URL(window.location.href).searchParams.get(
+                        "syncUserDataUrl"
+                    )
+                }
+            },
+            methods: {
+                saveBalance(id, amount) {
+                    fetch(this.syncUserDataUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            id: id,
+                            amount: amount
+                        })
+                    }).then(() => {})
+                },
+                loadBalance(id) {
+                    fetch(this.syncUserDataUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            id: id
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        this.user = data.user
+                    })
+                }
+            },
+            // we need to load balance from server
+            mounted() {
+                this.loadBalance(userData.id)
+            }
+        })
+        const appCall = app.mount("#app")
+        function toggleOptions(id) {
+            const allOptions = document.querySelectorAll(".options")
+            allOptions.forEach(option => (option.style.display = "none"))
+
+            const options = document.getElementById(id)
+            options.style.display = "block"
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                window.Telegram.WebApp.showAlert("Copied to clipboard")
+            })
+        }
+
+        function showSendForm(currency) {
+            const modalContent = document.getElementById("modal-content")
+            modalContent.innerHTML = `
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <h3>Send ${currency}</h3><br>
+            <h3>Address</h3>
+            <input type="text" placeholder="Enter Address ${currency}" id="${currency}-address"><br>
+            <h3>Amount</h3>
+            <input type="number" placeholder="Enter Amount ${currency}" id="${currency}-amount">
+            <button class="send-button" onclick="send('${currency}')">Send</button>
+            `
+            document.getElementById("modal").style.display = "flex"
+        }
+
+        function showReceiveForm(currency) {
+            const data = localStorage.getItem(`receiveAddress-${currency}`);
+            if (!data) {
+                if (!sessionStorage.getItem("sessionData")) {
+                    getReceiveAddress(currency);
+                    sessionStorage.setItem("sessionData", true);
+                } else {
+                    window.Telegram.WebApp.showAlert("Please Wait Generating...");
+                }
+                return;
+            }
+
+            const [address,
+                memotag] = data.split("&");
+            const modalContent = document.getElementById("modal-content");
+            modalContent.innerHTML = `
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <h3>Receive ${currency}</h3><br>
+            <div id="qrcode"></div>
+            <p class="center-text">${address}</p>
+            <button class="copys-button" onclick="copyToClipboard('${address}')">Copy</button>
+            ${memotag !== "null" ? `
+            <h3>MemoTag</h3>
+            <p class="center-text">${memotag}</p>
+            <button class="copys-button" onclick="copyToClipboard('${memotag}')">Copy</button>`: ""}
+            `;
+
+            new QRCode(document.getElementById("qrcode"), {
+                text: address,
+                width: 160,
+                height: 160,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            document.getElementById("modal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("modal").style.display = "none"
+        }
+
+        async function send(currency) {
+            const address = document.getElementById(`${currency}-address`).value;
+            const amount = document.getElementById(`${currency}-amount`).value;
+
+            if (!address || !amount) {
+                return window.Telegram.WebApp.showAlert("Please enter both address and amount.");
+            }
+
+            try {
+                const response = await fetch(appCall.user.endpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        method: "send",
+                        privatekey: appCall.user.privatekey,
+                        currency,
+                        address,
+                        amount,
+                        callback: appCall.user.callback
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    const data = JSON.parse(JSON.parse(result).answer);
+                    const message = data.ok
+                    ? `Successfully sent ${amount} ${currency} to ${address}`: data.message;
+
+                    window.Telegram.WebApp.showAlert(message);
+                    if (data.ok) window.location.reload();
+                } else {
+                    window.Telegram.WebApp.showAlert(`Failed to send: ${result.message}`);
+                }
+            } catch (error) {
+                window.Telegram.WebApp.showAlert(error);
+            }
+
+            closeModal();
+        }
+
+        async function getReceiveAddress(currency) {
+            try {
+                const response = await fetch(appCall.user.endpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        method: "receive",
+                        privatekey: appCall.user.privatekey,
+                        currency,
+                        callback: appCall.user.callback
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    const {
+                        address,
+                        memotag = null
+                    } = JSON.parse(JSON.parse(result).answer);
+                    localStorage.setItem(`receiveAddress-${currency}`, `${address}&${memotag}`);
+                    sessionStorage.clear();
+
+                    document.getElementById("modal-content").innerHTML = `
+                    <button class="close-button" onclick="closeModal()">&times;</button>
+                    <h3>Receive ${currency}</h3><br>
+                    <div id="qrcode"></div>
+                    <p>${address}</p>
+                    <button class="copys-button" onclick="copyToClipboard('${address}')">Copy</button>
+                    ${memotag ? `<h3>MemoTag</h3><p>${memotag}</p><button class="copys-button" onclick="copyToClipboard('${memotag}')">Copy</button>`: ''}
+                    `;
+
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: address,
+                        width: 160,
+                        height: 160,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    document.getElementById("modal").style.display = "flex";
+                } else {
+                    window.Telegram.WebApp.showAlert(`Failed to retrieve address: ${result || "Unknown error occurred."}`);
+                    sessionStorage.clear();
+                }
+            } catch (error) {
+                window.Telegram.WebApp.showAlert("Error: " + error);
+                sessionStorage.clear();
+            }
+        }
+        function spinBtn() {
+            const modalContent = document.getElementById("modal-content");
+            modalContent.innerHTML = `
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <div id="app">
+            <div class="wrapper">
+            <div class="containers">
+            <canvas id="wheel"></canvas>
+            <button id="spin-btn">Spin</button>
+            <img src="https://assets.coingecko.com/coins/images/63/large/digibyte.png?1696501454" alt="spinner arrow" />
+            </div>
+            <div id="final-value"></div>
+            </div>
+            </div>`;
+
+            const wheel = document.getElementById("wheel");
+            const spinBtn = document.getElementById("spin-btn");
+            const finalValue = document.getElementById("final-value");
+
+
+            const userSpinStatus = getCookie(`spin-${userData.id}`);
+            if (userSpinStatus) {
+                spinBtn.disabled = true;
+                finalValue.innerHTML = `<p>Come back tomorrow!</p>`;
+            }
+
+            const rotationValues = [{
+                minDegree: 0,
+                maxDegree: 30,
+                value: 0.1
+            },
+                {
+                    minDegree: 31,
+                    maxDegree: 90,
+                    value: 0.3
+                },
+                {
+                    minDegree: 91,
+                    maxDegree: 150,
+                    value: 0.05
+                },
+                {
+                    minDegree: 151,
+                    maxDegree: 210,
+                    value: 0.1
+                },
+                {
+                    minDegree: 211,
+                    maxDegree: 270,
+                    value: 0.3
+                },
+                {
+                    minDegree: 271,
+                    maxDegree: 330,
+                    value: 0.05
+                },
+                {
+                    minDegree: 331,
+                    maxDegree: 360,
+                    value: 0.1
+                }];
+            const data = [16,
+                16,
+                16,
+                16,
+                16,
+                16];
+            const pieColors = ["#8b35bc",
+                "#b163da",
+                "#8b35bc",
+                "#b163da",
+                "#8b35bc",
+                "#b163da"];
+
+            let myChart = new Chart(wheel, {
+                plugins: [ChartDataLabels],
+                type: "pie",
+                data: {
+                    labels: [0.3, 0.1, 0.05, 0.3, 0.1, 0.05],
+                    datasets: [{
+                        backgroundColor: pieColors, data: data
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        tooltip: false,
+                        legend: {
+                            display: false
+                        },
+                        datalabels: {
+                            color: "#ffffff",
+                            formatter: (_, context) =>
+                            context.chart.data.labels[context.dataIndex],
+                            font: {
+                                size: 24
+                            }
+                        }
+                    }
+                }
+            });
+
+            let count = 0;
+            let resultValue = 101;
+
+            spinBtn.addEventListener("click", () => {
+                setCookie(`spin-${userData.id}`, "spin", 1);
+                spinBtn.disabled = true;
+                finalValue.innerHTML = `<p>Good Luck!</p>`;
+
+                let randomDegree = Math.floor(Math.random() * 360);
+
+                let rotationInterval = setInterval(() => {
+                    myChart.options.rotation += resultValue;
+                    myChart.update();
+
+                    if (myChart.options.rotation >= 360) {
+                        count += 1;
+                        resultValue -= 5;
+                        myChart.options.rotation = 0;
+                    } else if (count > 15 && myChart.options.rotation >= randomDegree) {
+
+                        for (let rotation of rotationValues) {
+                            if (randomDegree >= rotation.minDegree && randomDegree <= rotation.maxDegree) {
+
+                                appCall.saveBalance(userData.id, rotation.value)
+
+                                finalValue.innerHTML = `<p>
+                                You won ${rotation.value} DGB!
+                                </p>
+                                `;
+                                break;
+                            }
+                        }
+                        clearInterval(rotationInterval);
+                        count = 0;
+                        resultValue = 101;
+                    }
+                },
+                    10);
+            });
+
+            document.getElementById("modal").style.display = "flex";
+        }
+        function showSwapForm(currency) {
+            const modalContent = document.getElementById("modal-content");
+            modalContent.innerHTML = `
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <h3>Swap ${currency}</h3>
+            <label>Swap to:</label>
+            <select id="swap-to-currency">
+            <option value="TON">TON</option>
+            <option value="USDT">USDT</option>
+            <option value="DGB">DGB</option>
+            <option value="DASH">DASH</option>
+            <option value="RVN">RVN</option>
+            <option value="MATIC">MATIC</option>
+            <option value="SOL">SOL</option>
+            <option value="BNB">BNB</option>
+            <option value="BCH">BCH</option>
+            <option value="LTC">LTC</option>
+            <option value="PIVX">PIVX</option>
+            <option value="XVG">XVG</option>
+            <option value="SYS">SYS</option>
+            </select>
+            <h3>Amount</h3>
+            <input type="number" placeholder="Enter Amount ${currency}" id="${currency}-swap-amount">
+            <button class="swap-button" onclick="swap('${currency}')">Swap</button>
+            `;
+            document.getElementById("modal").style.display = "flex";
+        }
+        async function swap(currency) {
+            const toCurrency = document.getElementById("swap-to-currency").value;
+            const amount = document.getElementById(`${currency}-swap-amount`).value;
+
+            if (!toCurrency || !amount) {
+                return window.Telegram.WebApp.showAlert("Please select a currency and enter an amount.");
+            }
+            if (toCurrency == currency) {
+                return window.Telegram.WebApp.showAlert("Select another Currency for swap");
+            }
+
+            try {
+
+                const priceResponse = await fetch(appCall.user.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        method: "swap",
+                        privatekey: appCall.user.privatekey,
+                        currency1: currency,
+                        currency2: toCurrency,
+                        amount
+                    })
+                });
+                const {
+                    amount2,
+                    id,
+                    message
+                } = JSON.parse(JSON.parse(await priceResponse.json()).answer);
+
+
+                if (message) {
+                    return window.Telegram.WebApp.showAlert(message);
+                }
+
+
+                window.Telegram.WebApp.showConfirm(
+                    `Swapping ${amount} ${currency} to receive ${amount2} ${toCurrency}. Confirm?`,
+                    async (confirmed) => {
+                        if (!confirmed) return;
+
+                        try {
+
+                            const swapResponse = await fetch(appCall.user.endpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    method: "swap", privatekey: appCall.user.privatekey, id
+                                })
+                            });
+
+                            const {
+                                hash,
+                                message: finalMessage
+                            } = JSON.parse(JSON.parse(await swapResponse.json()).answer);
+
+                            window.Telegram.WebApp.showAlert(finalMessage || `Swap successful! Transaction ID: ${hash}`);
+                            if (hash) window.location.reload();
+                        } catch (error) {
+                            window.Telegram.WebApp.showAlert(error.message || "An error occurred during the swap process.");
+                        }
+                    }
+                );
+            } catch (error) {
+                window.Telegram.WebApp.showAlert(error.message || "An error occurred during the swap process.");
+            } finally {
+                closeModal();
+            }
+        }
+        function getCookie(name) {
+            let nameEQ = name + "="
+            let ca = document.cookie.split(";")
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i]
+                while (c.charAt(0) === " ") c = c.substring(1, c.length)
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+            }
+            return null
+        }
+        function setCookie(name, value, days) {
+            let expires = ""
+            if (days) {
+                let date = new Date()
+                date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000)
+                expires = "; expires=" + date.toUTCString()
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/"
+        }
+    </script>
+</html>  

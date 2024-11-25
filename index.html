@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Interface</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+        }
+
+        .container {
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .section {
+            background-color: #f9fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e1e5eb;
+        }
+
+        .section h3 {
+            margin-bottom: 10px;
+            color: #444;
+            font-weight: 600;
+        }
+
+        .api-key {
+            display: flex;
+            align-items: center;
+            background-color: #fdfdfd;
+            padding: 10px 15px;
+            border: 1px solid #e1e5eb;
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .api-key input {
+            flex: 1;
+            border: none;
+            background: none;
+            font-size: 14px;
+            color: #333;
+            padding: 5px;
+            outline: none;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .api-key input:focus {
+            border: none;
+            outline: none;
+        }
+
+        .copy-button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .copy-button:hover {
+            background-color: #2ecc71;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .copy-button:focus {
+            outline: 2px solid #2ecc71;
+        }
+
+        .account-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #e74c3c;
+            color: white;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .balance {
+            font-size: 0.9em;
+        }
+
+        .options {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: flex-end;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            width: 100%;
+            max-width: 400px;
+            height: 50vh;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-content h3 {
+            margin-top: 10px;
+        }
+
+        .modal-content input,
+        .modal-content select {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .modal-content input:focus,
+        .modal-content select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .send-button,
+        .receive-button,
+        .swap-button {
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .send-button {
+            background-color: #e74c3c;
+        }
+
+        .receive-button {
+            background-color: #3498db;
+        }
+
+        .swap-button {
+            background-color: #f39c12;
+        }
+
+        .copys-button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .copys-button:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        .copys-button:active {
+            background-color: #3e8e41;
+            transform: scale(0.95);
+        }
+
+        .copys-button:focus {
+            outline: 2px solid #4caf50;
+            outline-offset: 2px;
+        }
+
+        #qrcode {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #spinBtn {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #333;
+            border-radius: 100%;
+            background: url('https://i.ibb.co/yFQv6Pq/IMG-20241124-081334.jpg') no-repeat center center;
+            background-size: cover;
+            cursor: pointer;
+            transition: transform 0.5s ease;
+        }
+
+        #spinBtn:hover {
+            transform: rotate(360deg);
+        }
+
+        #wheel {
+            max-height: inherit;
+            width: inherit;
+            top: 0;
+            padding: 0;
+        }
+
+        #spin-btn {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            top: 50%;
+            left: 50%;
+            height: 26%;
+            width: 26%;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 0;
+            background: radial-gradient(#fdcf3b 50%, #d88a40 85%);
+            color: #c66e16;
+            text-transform: uppercase;
+            font-size: 1.8em;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        img {
+            position: absolute;
+            width: 4em;
+            top: 45%;
+            right: -8%;
+        }
+
+        #final-value {
+            font-size: 1.5em;
+            text-align: center;
+            margin-top: 1.5em;
+            color: #202020;
+            font-weight: 500;
+        }
+
+        #countdown {
+            font-size: 1.2em;
+            color: red;
+            text-align: center;
+            margin-top: 1em;
+        }
+
+@media screen and (max-width: 768px) {
+            .wrapper {
+                font-size: 12px;
+            }
+
+            img {
+                right: -5%;
+            }
+        }
+        .wrapper {
+            width: 80%;
+            max-width: 34.37em;
+            max-height: 90vh;
+            background-color: #ffffff;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            top: 50%;
+            left: 50%;
+            padding: 0;
+            border-radius: 1em;
+            box-shadow: 0 4em 5em rgba(27, 8, 53, 0.2);
+        }
+        .containers {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="app">
+        <!-- API KEY Section -->
+        <div class="section">
+            <h3>API KEY</h3>
+            <div class="api-key">
+                <span id="private-key">{{ user.privatekey }}</span>
+                <button class="copy-button" onclick="copyToClipboard(document.getElementById('private-key').innerText)">Copy</button>
+            </div>
+        </div>
+
+        <!-- Accounts Section -->
+        <br><h2 style="display: inline-block; margin-right: 170px;">Accounts</h2>
+        <label style="display: inline-block;">
+            <button id="spinBtn" class="spinBtn" onclick="spinBtn()"></button>
+        </label>
+        <br><p>
+            LowRateFeeBot is a cryptocurrency payment platform allowing merchants to accept and payout over 13 cryptocurrencies with the lowest fees on the market.
+        </p>
+        <br>
+        <!-- TON Account Item -->
+        <div class="account-item" onclick="toggleOptions('ton-options')">
+            <div>
+                <strong>TON</strong>
+                <div class="balance">
+                    {{ user.ton }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="ton-options" class="options">
+            <button class="send-button" onclick="showSendForm('TON')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('TON')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('TON')">Swap</button>
+        </div>
+
+        <!-- USDT Account Item -->
+        <div class="account-item" onclick="toggleOptions('usdt-options')">
+            <div>
+                <strong>USDT (Polygon)</strong>
+                <div class="balance">
+                    {{ user.usdt }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="usdt-options" class="options">
+            <button class="send-button" onclick="showSendForm('USDT')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('USDT')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('USDT')">Swap</button>
+        </div>
+        <!-- DGB Account Item -->
+        <div class="account-item" onclick="toggleOptions('dgb-options')">
+            <div>
+                <strong>DGB</strong>
+                <div class="balance">
+                    {{ user.dgb }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="dgb-options" class="options">
+            <button class="send-button" onclick="showSendForm('DGB')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('DGB')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('DGB')">Swap</button>
+        </div>
+        <!-- DASH Account Item -->
+        <div class="account-item" onclick="toggleOptions('dash-options')">
+            <div>
+                <strong>DASH</strong>
+                <div class="balance">
+                    {{ user.dash }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="dash-options" class="options">
+            <button class="send-button" onclick="showSendForm('DASH')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('DASH')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('DASH')">Swap</button>
+        </div>
+        <!-- RVN Account Item -->
+        <div class="account-item" onclick="toggleOptions('rvn-options')">
+            <div>
+                <strong>RVN</strong>
+                <div class="balance">
+                    {{ user.rvn }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="rvn-options" class="options">
+            <button class="send-button" onclick="showSendForm('RVN')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('RVN')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('RVN')">Swap</button>
+        </div>
+        <!-- MATIC Account Item -->
+        <div class="account-item" onclick="toggleOptions('matic-options')">
+            <div>
+                <strong>MATIC</strong>
+                <div class="balance">
+                    {{ user.matic }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="matic-options" class="options">
+            <button class="send-button" onclick="showSendForm('MATIC')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('MATIC')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('MATIC')">Swap</button>
+        </div>
+        <!-- SOL Account Item -->
+        <div class="account-item" onclick="toggleOptions('sol-options')">
+            <div>
+                <strong>SOL</strong>
+                <div class="balance">
+                    {{ user.sol }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="sol-options" class="options">
+            <button class="send-button" onclick="showSendForm('SOL')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('SOL')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('SOL')">Swap</button>
+        </div>
+        <!-- BNB Account Item -->
+        <div class="account-item" onclick="toggleOptions('bnb-options')">
+            <div>
+                <strong>BNB</strong>
+                <div class="balance">
+                    {{ user.bnb }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="bnb-options" class="options">
+            <button class="send-button" onclick="showSendForm('BNB')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('BNB')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('BNB')">Swap</button>
+        </div>
+        <!-- BCH Account Item -->
+        <div class="account-item" onclick="toggleOptions('bch-options')">
+            <div>
+                <strong>BCH</strong>
+                <div class="balance">
+                    {{ user.bch }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="bch-options" class="options">
+            <button class="send-button" onclick="showSendForm('BCH')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('BCH')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('BCH')">Swap</button>
+        </div>
+        <!-- LTC Account Item -->
+        <div class="account-item" onclick="toggleOptions('ltc-options')">
+            <div>
+                <strong>LTC</strong>
+                <div class="balance">
+                    {{ user.ltc }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="ltc-options" class="options">
+            <button class="send-button" onclick="showSendForm('LTC')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('LTC')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('LTC')">Swap</button>
+        </div>
+        <!-- PIVX Account Item -->
+        <div class="account-item" onclick="toggleOptions('pivx-options')">
+            <div>
+                <strong>PIVX</strong>
+                <div class="balance">
+                    {{ user.pivx }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="pivx-options" class="options">
+            <button class="send-button" onclick="showSendForm('PIVX')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('PIVX')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('PIVX')">Swap</button>
+        </div>
+        <!-- XVG Account Item -->
+        <div class="account-item" onclick="toggleOptions('xvg-options')">
+            <div>
+                <strong>XVG</strong>
+                <div class="balance">
+                    {{ user.xvg }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="xvg-options" class="options">
+            <button class="send-button" onclick="showSendForm('XVG')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('XVG')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('XVG')">Swap</button>
+        </div>
+        <!-- SYS Account Item -->
+        <div class="account-item" onclick="toggleOptions('sys-options')">
+            <div>
+                <strong>SYS</strong>
+                <div class="balance">
+                    {{ user.sys }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="sys-options" class="options">
+            <button class="send-button" onclick="showSendForm('SYS')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('SYS')">Receive</button>
+            <button class="swap-button" onclick="showSwapForm('SYS')">Swap</button>
+        </div>
+        <!-- LTCT Account Item -->
+        <div class="account-item" onclick="toggleOptions('ltct-options')">
+            <div>
+                <strong>LTCT</strong>
+                <div class="balance">
+                    {{ user.ltct }}
+                </div>
+            </div>
+            <div>
+                •••
+            </div>
+        </div>
+        <div id="ltct-options" class="options">
+            <button class="send-button" onclick="showSendForm('LTCT')">Send</button>
+            <button class="receive-button" onclick="showReceiveForm('LTCT')">Receive</button>
+        </div>
+    </div>
+
+    <!-- Modal for Send and Receive -->
+    <div id="modal" class="modal">
+        <div class="modal-content" id="modal-content">
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <!-- Content will be dynamically inserted here -->
+        </div>
+    </div>
+    <!-- Telegram -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- VueJS script -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.min.js"></script>
+    <!-- Qr Code -->
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <!-- spin wheel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.1.0/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.min.js"></script>
+    <script>
+        var urlString = window.location.href
+        var hashString = urlString.split("#")[1]
+        var decodedHashString = decodeURIComponent(hashString)
+        var urlParams = new URLSearchParams(decodedHashString)
+        var queryId = urlParams.get("tgWebAppData")
+        var userDataString = queryId.split("user=")[1]
+        var userData = JSON.parse(deco

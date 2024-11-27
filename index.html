@@ -615,11 +615,11 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.min.js"></script>
     <script>
         var urlString = window.location.href
-        var hashString = urlString.split("#")[1]
+        const hashString = urlString?.split("#")[1];
         var decodedHashString = decodeURIComponent(hashString)
         var urlParams = new URLSearchParams(decodedHashString)
         var queryId = urlParams.get("tgWebAppData")
-        var userDataString = queryId.split("user=")[1]
+        const userDataString = queryId ? queryId.split("user=")[1] : {ok: "undefined"};
         var userData = JSON.parse(decodeURIComponent(userDataString))
         const app = Vue.createApp({
             data() {
@@ -642,7 +642,11 @@
                             id,
                             amount
                         })
-                    }).then(() => {})
+                    }).then(() => {
+this.user.dgb += amount;
+this.user.claim += Date.now();
+
+})
                 },
                 loadBalance(id) {
                     fetch(this.syncUserDataUrl, {
@@ -768,7 +772,7 @@
                     ? `Successfully sent ${amount} ${currency} to ${address}`: data.message;
 
                     window.Telegram.WebApp.showAlert(message);
-                    if (data.ok) window.location.reload();
+                    if (data.ok) appCall.user[currency.toLowerCase()] -= amount;
                 } else {
                     window.Telegram.WebApp.showAlert(`Failed to send: ${result.message}`);
                 }
@@ -1068,7 +1072,8 @@ if (userSpinStatus) {
                             } = JSON.parse(JSON.parse(await swapResponse.json()).answer);
 
                             window.Telegram.WebApp.showAlert(finalMessage || `Swap successful! Transaction ID: ${hash}`);
-                            if (hash) window.location.reload();
+                            if (hash) appCall.user[currency.toLowerCase()] -= amount;
+appCall.user[toCurrency.toLowerCase()] += amount2;
                         } catch (error) {
                             window.Telegram.WebApp.showAlert(error.message || "An error occurred during the swap process.");
                         }

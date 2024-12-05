@@ -866,7 +866,7 @@ if (userSpinStatus) {
         var wait_minutes = Math.floor(next);
         var seconds = Math.floor((next - wait_minutes) * 60);
         spinBtn.disabled = true; 
-        finalValue.innerHTML = `<p>Come back after: ${wait_hours}h ${wait_minutes}m ${seconds}s!</p>`;
+        finalValue.innerHTML = `<p>${wait_hours}hours ${wait_minutes}minutes ${seconds}seconds!</p>`;
     } else {
         spinBtn.disabled = false;
     }
@@ -895,7 +895,7 @@ if (userSpinStatus) {
                 {
                     minDegree: 211,
                     maxDegree: 270,
-                    value: 0.3
+                    value: 0.15
                 },
                 {
                     minDegree: 271,
@@ -924,7 +924,7 @@ if (userSpinStatus) {
                 plugins: [ChartDataLabels],
                 type: "pie",
                 data: {
-                    labels: [0.3, 0.1, 0.05, 0.3, 0.1, 0.05],
+                    labels: [0.3, 0.1, 0.05, 0.15, 0.1, 0.05],
                     datasets: [{
                         backgroundColor: pieColors, data: data
                     }]
